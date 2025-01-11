@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from backend.blizzard_api import BlizzardAPI
 from backend.db.models import AuctionSnapshot, CommoditySummary
 from backend.db.auction.auction_utils import calculate_median_price, count_new_listings, estimate_sales
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 class AuctionCollector:
     def __init__(self, session: Session, api: BlizzardAPI):
@@ -18,11 +18,16 @@ class AuctionCollector:
             'LONG': 3,     # 2 - 12 hours
             'VERY_LONG': 4 # 12 - 48 hours
         }
+        time = self.session.query(AuctionSnapshot.snapshot_time).order_by(AuctionSnapshot.snapshot_time.desc()).first()
+        if time is None:
+            self.last_time_collected = None
+        else:
+            self.last_time_collected = time[0]
     
     def collect_snapshot(self):
         """Collect and store current auction house data"""
         commodities = self.api.get_commodities()
-        snapshot_time = datetime.now()
+        snapshot_time = datetime.now(timezone.utc)
         
         # Prepare batch insert
         values = [{
@@ -44,6 +49,8 @@ class AuctionCollector:
         # Execute and commit
         self.session.execute(stmt)
         self.session.commit()
+        
+        self.last_time_collected = snapshot_time
         
     def get_snapshot(self, timestamp: datetime) -> Dict[int, List[Dict]]:
         """Get auction snapshot for specific timestamp"""

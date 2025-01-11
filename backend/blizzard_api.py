@@ -1,8 +1,10 @@
+from datetime import datetime, strptime, timezone
 from typing import Dict, List
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import time
+from typing import Union
 
 class BlizzardAPI:
     def __init__(self, client_id, client_secret, region='us'):
@@ -57,19 +59,40 @@ class BlizzardAPI:
         token_data = self._make_request('POST', token_url, data=data, auth=auth)
         self.access_token = token_data['access_token']
         self.token_expiry = time.time() + token_data['expires_in']
-
-    def get_commodities(self):
-        """Get auction house commodities"""
+        
+    def is_commodities_updated(self, time: Union[datetime, None]) -> bool:
+        """Check if the commodities data has been updated"""
+        if time is None:
+            return True
+        
         if not self.access_token or time.time() > self.token_expiry:
             self.get_access_token()
             
-        item_url = f"https://{self.region}.api.blizzard.com/data/wow/auctions/commodities"
+        url = f"https://{self.region}.api.blizzard.com/data/wow/auctions/commodities"
         params = {
             'namespace': f'dynamic-{self.region}',
             'locale': 'en_US'
         }
         
-        return self._make_request('GET', item_url, params=params)
+        response = self._make_request('HEAD', url, params=params)
+        
+        last_modified = datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
+        last_modified = last_modified.replace(tzinfo=timezone.utc)
+        
+        return last_modified > time
+    
+    def get_commodities(self):
+        """Get auction house commodities if it has been modified since last check"""
+        if not self.access_token or time.time() > self.token_expiry:
+            self.get_access_token()
+            
+        url = f"https://{self.region}.api.blizzard.com/data/wow/auctions/commodities"
+        params = {
+            'namespace': f'dynamic-{self.region}',
+            'locale': 'en_US'
+        }
+        
+        return self._make_request('GET', url, params=params)
     
     def get_item(self, item_id):
         """Get item details by ID"""

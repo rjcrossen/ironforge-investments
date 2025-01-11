@@ -32,5 +32,8 @@ collector.collect_snapshot()
 
 collector.process_summary(datetime.datetime.now())
 
+if api.is_commodities_updated(collector.last_time_collected):
+    collector.get_commotities()
+
 # TODO: remove uniqueness constraint of auction_id in auction_snapshots table
 # TODO: add a new 
