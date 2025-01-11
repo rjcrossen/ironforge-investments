@@ -14,7 +14,7 @@ client_secret = os.getenv("BLIZZARD_API_CLIENT_SECRET")
 time.sleep(5)
 
 engine = create_engine("postgresql+psycopg2://postgres:postgres@db:5432/DB")
-
+# test 
 #backend.db.seeders.populate_reagents.get_all_reagents()
 
 api = BlizzardAPI(client_id, client_secret, region="eu")
