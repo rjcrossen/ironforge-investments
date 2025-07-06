@@ -52,46 +52,9 @@ uv run pytest  # Run tests
 uv run ruff check .  # Lint code
 ```
 
-## 📊 Database Schema
-
-The database uses monthly partitioning for efficient time-series data storage:
-
-- **auction_snapshots_eu/us**: Raw auction data partitioned by snapshot_time
-- **commodity_summaries_eu/us**: Aggregated price data partitioned by summary_time
-- **recipes/reagents**: Crafting recipe data
-- **scraper_logs**: Collection status and error tracking
-- **benchmarks**: Performance metrics
-
 ## 🛠️ Key Commands
 
 - **Build & Start**: `docker-compose build && docker-compose up -d`
 - **View Logs**: `docker-compose logs -f scheduler`
 - **Stop Services**: `docker-compose down`
 - **Database Shell**: `docker-compose exec db psql -U postgres -d DB`
-
-## 🎯 Roadmap
-
-### Priority 1
-
-- [ ] Complete commodity summary processing pipeline
-- [ ] Implement ironforge-api-service with FastAPI
-- [ ] Add comprehensive test coverage
-- [ ] Set up CI/CD pipeline
-
-### Priority 2
-
-- [ ] Add monitoring and alerting
-- [ ] Implement data retention policies
-- [ ] Add market analysis algorithms
-- [ ] Create web dashboard for visualization
-
-## 📝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
