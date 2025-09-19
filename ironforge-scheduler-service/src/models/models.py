@@ -14,6 +14,19 @@ from sqlalchemy.sql import func
 
 Base = declarative_base()
 
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    level = Column(Integer, nullable=False)
+    class_ = Column(String(50), name="class", nullable=False)
+    subclass = Column(String(50), nullable=False)
+    inventory_type = Column(String(50), nullable=False)
+    is_equippable = Column(Boolean, nullable=False, default=False)
+    is_stackable = Column(Boolean, nullable=False, default=False)
+    quality = Column(String(10), nullable=False)
+
 
 class Recipe(Base):
     __tablename__ = "recipes"

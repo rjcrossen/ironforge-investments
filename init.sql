@@ -1,6 +1,19 @@
 -- Ironforge Database Initialization Script
 -- This script creates all necessary tables and sets up initial partitioning
 
+-- Create items table
+CREATE TABLE IF NOT EXISTS items (
+    id INTEGER NOT NULL PRIMARY KEY,
+    "name" VARCHAR(255) NOT NULL,
+    "level" SMALLINT NOT NULL,
+    "class" VARCHAR(50) NOT NULL,
+    subclass VARCHAR(50) NOT NULL,
+    inventory_type VARCHAR(50) NOT NULL,
+    is_equippable BOOLEAN NOT NULL DEFAULT FALSE,
+    is_stackable BOOLEAN NOT NULL DEFAULT FALSE,
+    quality VARCHAR(10) NOT NULL
+);
+
 -- Create recipes table
 CREATE TABLE IF NOT EXISTS recipes (
     id INTEGER NOT NULL,
@@ -189,6 +202,9 @@ $$ LANGUAGE plpgsql;
 SELECT create_monthly_partitions(6);
 
 -- Create indexes on non-partitioned tables
+CREATE INDEX IF NOT EXISTS idx_items_id ON items(id);
+CREATE INDEX IF NOT EXISTS idx_items_name ON items(name);
+
 CREATE INDEX IF NOT EXISTS idx_recipes_profession ON recipes(profession);
 CREATE INDEX IF NOT EXISTS idx_recipes_faction ON recipes(faction);
 CREATE INDEX IF NOT EXISTS idx_recipes_crafted_item_id ON recipes(crafted_item_id);

@@ -1,8 +1,6 @@
 from typing import Any
-
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-
 from models.models import Recipe
 
 
@@ -10,9 +8,7 @@ class RecipeRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def batch_insert(
-        self, recipes: list[dict[str, Any]], chunk_size: int = 1000
-    ) -> None:
+    def batch_insert(self, recipes: list[dict[str, Any]], chunk_size: int = 1000) -> None:
         """Insert multiple recipe records into the database in chunks."""
         if not recipes:
             return
@@ -23,22 +19,10 @@ class RecipeRepository:
             stmt = stmt.on_conflict_do_nothing()
             self.session.execute(stmt)
 
-    def get_recipe_by_id_and_faction(self, recipe_id: int, faction: str) -> Recipe:
+    def get_recipe_by_id_and_faction(self, recipe_id: int, faction: str) -> Recipe | None:
         """Get a specific recipe by ID and faction."""
-        return (
-            self.session.query(Recipe)
-            .filter(Recipe.id == recipe_id, Recipe.faction == faction)
-            .first()
-        )
+        return self.session.query(Recipe).filter(Recipe.id == recipe_id, Recipe.faction == faction).first()
 
-    def get_recipes_by_profession(self, profession: str) -> list[Recipe]:
-        """Get all recipes for a specific profession."""
-        return self.session.query(Recipe).filter(Recipe.profession == profession).all()
-
-    def recipe_exists(self, recipe_id: int, faction: str) -> bool:
-        """Check if a recipe already exists."""
-        return (
-            self.session.query(Recipe)
-            .filter(Recipe.id == recipe_id, Recipe.faction == faction)
-            .first()
-        ) is not None
+    def get_all_recipes(self) -> list[Recipe]:
+        """Get all recipes from the database."""
+        return self.session.query(Recipe).all()

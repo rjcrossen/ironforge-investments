@@ -31,6 +31,20 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  neo4j:
+    image: neo4j:5.25
+    container_name: ironforge-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/test1234  # username/password
+    ports:
+      - "7474:7474"   # HTTP browser
+      - "7687:7687"   # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+    restart: unless-stopped
+
   scheduler:
     platform: linux/amd64
     container_name: ironforge-scheduler
@@ -55,3 +69,6 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:

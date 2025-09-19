@@ -102,9 +102,9 @@ def start_scheduler():
 
 def main():
     """Main entry point."""
+    
     logger.info("Starting Ironforge Scheduler Service...")
     start_scheduler()
-
 
 if __name__ == "__main__":
     main()
