@@ -11,7 +11,6 @@ def calculate_median_price(auctions: list[dict]) -> int:
     prices = []
     prices.extend(a["unit_price"] for a in auctions for _ in range(a["quantity"]))
     prices.sort()
-    print(prices)
     return statistics.median(prices)
 
 

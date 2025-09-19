@@ -46,7 +46,6 @@ class Reagent(Base):
     )
 
 
-
 class AuctionSnapshotEU(Base):
     __tablename__ = "auction_snapshots_eu"
 
@@ -96,7 +95,7 @@ class CommoditySummaryUS(Base):
 class SeederStatus(Base):
     __tablename__ = "seeder_status"
 
-    seeder_type = Column(String(50), primary_key=True)  # 'recipes' or 'reagents'
+    seeder_type = Column(String(50), primary_key=True)
     completed = Column(Boolean, nullable=False, default=False)
     completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -119,14 +118,36 @@ class Benchmark(Base):
     __tablename__ = "benchmarks"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    operation_type = Column(String(50), nullable=False)  # 'snapshot', 'seeding', 'summary'
-    operation_name = Column(String(100), nullable=False)  # 'eu_snapshot', 'recipe_seeding', etc.
-    region = Column(String(2), nullable=True)  # 'eu', 'us' (null for non-regional operations)
+    operation_type = Column(
+        String(50), nullable=False
+    )  # 'snapshot', 'seeding', 'summary'
+    operation_name = Column(
+        String(100), nullable=False
+    )  # 'eu_snapshot', 'recipe_seeding', etc.
+    region = Column(
+        String(2), nullable=True
+    )  # 'eu', 'us' (null for non-regional operations)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     duration_seconds = Column(Float, nullable=False)
     record_count = Column(Integer, nullable=True)  # Number of records processed
     status = Column(String(20), nullable=False)  # 'success', 'failed', 'partial'
     error_message = Column(String(500), nullable=True)
-    extra_data = Column(JSON, nullable=True)  # Additional context like API response times
+    extra_data = Column(
+        JSON, nullable=True
+    )  # Additional context like API response times
     created_at = Column(DateTime, server_default=func.now())
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    level = Column(Integer, nullable=False)
+    class_ = Column(String(50), name="class", nullable=False)
+    subclass = Column(String(50), nullable=False)
+    inventory_type = Column(String(50), nullable=False)
+    is_equippable = Column(Boolean, nullable=False, default=False)
+    is_stackable = Column(Boolean, nullable=False, default=False)
+    quality = Column(String(10), nullable=False)

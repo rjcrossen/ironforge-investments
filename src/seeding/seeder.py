@@ -27,7 +27,6 @@ class Seeder(ABC):
                 "Missing Blizzard API credentials in environment variables"
             )
 
-        # Type checker now knows these are strings
         self.client_id: str = client_id
         self.client_secret: str = client_secret
 
@@ -72,8 +71,8 @@ class SeederOrchestrator:
         status = session.query(SeederStatus).filter_by(seeder_type=seeder_type).first()
 
         if status:
-            status.completed = True
-            status.completed_at = datetime.now(UTC)
+            status.completed = True  # type: ignore
+            status.completed_at = datetime.now(UTC)  # type: ignore
         else:
             status = SeederStatus(
                 seeder_type=seeder_type,

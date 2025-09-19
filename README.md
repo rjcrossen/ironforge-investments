@@ -17,6 +17,7 @@ The system consists of containerized services that collect, store, and analyze a
 - Docker & Docker Compose
 - Python 3.11+ (for local development)
 - Blizzard API credentials
+- UV
 
 ### Quick Start
 
@@ -45,7 +46,7 @@ For scheduler service development:
 
 ```bash
 cd ironforge-scheduler-service
-python -m venv .venv
+uv venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 uv sync
 uv run pytest  # Run tests

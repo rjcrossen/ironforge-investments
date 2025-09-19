@@ -124,9 +124,3 @@ class RecipeSeeder(Seeder):
                 recipe_repo.batch_insert(recipe_batch)
                 session.commit()
                 print(f"Inserted {len(recipe_batch)} recipes for {profession['name']}")
-
-
-def get_all_recipes():
-    """Legacy function for backward compatibility."""
-    seeder = RecipeSeeder()
-    seeder.run()

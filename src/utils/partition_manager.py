@@ -6,6 +6,7 @@ for auction snapshots and commodity summaries tables.
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 
 from sqlalchemy import text
@@ -89,23 +90,19 @@ class PartitionManager:
             List of partition information dictionaries
         """
         try:
-            # Get partition info with actual constraints
+            # Get partition info - simplified query to find time-partitioned tables
             result = session.execute(
                 text("""
                 SELECT 
                     schemaname,
                     tablename as partition_name,
-                    pg_get_expr(c.conbin, c.conrelid) as partition_constraint
+                    'time_partition' as partition_type
                 FROM pg_tables pt
-                JOIN pg_class t ON t.relname = pt.tablename
-                JOIN pg_constraint c ON c.conrelid = t.oid
                 WHERE (pt.tablename LIKE '%auction_snapshots_eu_%' 
                        OR pt.tablename LIKE '%auction_snapshots_us_%'
                        OR pt.tablename LIKE '%commodity_summaries_eu_%'
                        OR pt.tablename LIKE '%commodity_summaries_us_%')
                   AND pt.tablename ~ '_[0-9]{4}_[0-9]{2}$'
-                  AND c.contype = 'c'
-                  AND pg_get_expr(c.conbin, c.conrelid) LIKE '%FOR VALUES FROM%'
                 ORDER BY schemaname, tablename
             """)
             )
@@ -116,7 +113,7 @@ class PartitionManager:
                     {
                         "schema": row.schemaname,
                         "partition_name": row.partition_name,
-                        "constraint": row.partition_constraint,
+                        "partition_type": row.partition_type,
                     }
                 )
 
@@ -213,17 +210,26 @@ class PartitionManager:
             max_future_date = current_date
 
             for partition in partitions:
-                constraint = partition["constraint"]
-                # Extract end date from constraint (simplified parsing)
-                if "TO (" in constraint:
-                    try:
-                        # This is a simplified extraction - in production you might want more robust parsing
-                        end_date_str = constraint.split("TO ('")[1].split("'")[0]
-                        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+                partition_name = partition["partition_name"]
+                # Extract date from partition name (e.g. auction_snapshots_eu_2025_07)
+                try:
+                    # Extract year and month from partition name
+                    parts = partition_name.split("_")
+                    if len(parts) >= 2:
+                        year_str = parts[-2]
+                        month_str = parts[-1]
+                        # Create end date as the first day of the next month
+                        partition_date = datetime.strptime(f"{year_str}-{month_str}-01", "%Y-%m-%d")
+                        # Calculate the end of the month
+                        if partition_date.month == 12:
+                            end_date = datetime(partition_date.year + 1, 1, 1)
+                        else:
+                            end_date = datetime(partition_date.year, partition_date.month + 1, 1)
+                        
                         if end_date > max_future_date:
                             max_future_date = end_date
-                    except (IndexError, ValueError):
-                        continue
+                except (IndexError, ValueError):
+                    continue
 
             # Calculate months of future coverage
             months_diff = (max_future_date.year - current_date.year) * 12 + (
@@ -272,8 +278,13 @@ class PartitionManager:
                 self.logger.info("Creating additional future partitions...")
                 self.ensure_future_partitions(session, months_ahead=6)
 
-            # Cleanup old partitions (keep 12 months by default)
-            self.cleanup_old_partitions(session, months_to_keep=12)
+            # Cleanup old partitions - configurable via environment
+            cleanup_enabled = os.getenv("PARTITION_CLEANUP_ENABLED", "false").lower() == "true"
+            if cleanup_enabled:
+                months_to_keep = int(os.getenv("PARTITION_CLEANUP_MONTHS", "12"))
+                self.cleanup_old_partitions(session, months_to_keep=months_to_keep)
+            else:
+                self.logger.info("Partition cleanup disabled - preserving historical data")
 
             self.logger.info("Partition maintenance completed successfully")
 

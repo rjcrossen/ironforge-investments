@@ -110,9 +110,3 @@ class ReagentSeeder(Seeder):
                     session.rollback()
                     print(f"Error inserting reagents for {profession['name']}: {e}")
                     raise
-
-
-def get_all_reagents():
-    """Legacy function for backward compatibility."""
-    seeder = ReagentSeeder()
-    seeder.run()

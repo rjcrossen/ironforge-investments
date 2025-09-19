@@ -1,4 +1,3 @@
-# type: ignore
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -15,7 +14,7 @@ class BlizzardConfig:
     client_id: str
     client_secret: str
     region: str
-    timeout: int = 10
+    timeout: int = 60  # Increased timeout for large auction data downloads
     max_retries: int = 3
 
 
@@ -110,19 +109,22 @@ class BlizzardAPI:
     def get_commodities(self, return_headers=False):
         """Get auction house commodities, optionally return headers for change detection"""
         url = self._build_url("/data/wow/auctions/commodities")
-        
+
         # Make request manually to capture headers if needed
         if return_headers:
             self._ensure_valid_token()
-            headers = {"Authorization": f"Bearer {self._token_info['access_token']}"}
-            response = self.session.get(
-                url, 
-                headers=headers, 
-                params=self._dynamic_params(), 
-                timeout=self.config.timeout
-            )
-            response.raise_for_status()
-            return response.json(), response.headers
+            if self._token_info is not None:
+                headers = {
+                    "Authorization": f"Bearer {self._token_info['access_token']}"
+                }
+                response = self.session.get(
+                    url,
+                    headers=headers,
+                    params=self._dynamic_params(),
+                    timeout=self.config.timeout,
+                )
+                response.raise_for_status()
+                return response.json(), response.headers
         else:
             response = self._make_request("GET", url, self._dynamic_params())
             assert isinstance(response, dict)  # Type assertion for Pyright
@@ -136,45 +138,48 @@ class BlizzardAPI:
         try:
             url = self._build_url("/data/wow/auctions/commodities")
             params = self._dynamic_params()
-            
+
             # Prepare headers with If-Modified-Since for efficient checking
             self._ensure_valid_token()
-            headers = {"Authorization": f"Bearer {self._token_info['access_token']}"}
-            
-            # Add If-Modified-Since header for conditional GET
-            if_modified_since = last_check.strftime("%a, %d %b %Y %H:%M:%S GMT")
-            headers["If-Modified-Since"] = if_modified_since
-            
-            response = self.session.get(
-                url, 
-                headers=headers, 
-                params=params, 
-                timeout=self.config.timeout
-            )
-            
-            if response.status_code == 304:
-                # 304 Not Modified - data hasn't changed, no body downloaded!
-                return False
-            elif response.status_code == 200:
-                # 200 OK - data has changed, cache the response for reuse
-                data = response.json()
-                self._cached_commodities = data
-                self._cached_commodities_timestamp = datetime.now(UTC)
-                return True
-            else:
-                response.raise_for_status()
-                return True
-                
+            if self._token_info is not None:
+                headers = {
+                    "Authorization": f"Bearer {self._token_info['access_token']}"
+                }
+
+                # Add If-Modified-Since header for conditional GET
+                if_modified_since = last_check.strftime("%a, %d %b %Y %H:%M:%S GMT")
+                headers["If-Modified-Since"] = if_modified_since
+
+                response = self.session.get(
+                    url, headers=headers, params=params, timeout=self.config.timeout
+                )
+
+                if response.status_code == 304:
+                    # 304 Not Modified - data hasn't changed, no body downloaded!
+                    return False
+                elif response.status_code == 200:
+                    # 200 OK - data has changed, cache the response for reuse
+                    data = response.json()
+                    self._cached_commodities = data
+                    self._cached_commodities_timestamp = datetime.now(UTC)
+                    return True
+                else:
+                    response.raise_for_status()
+                    return True
+
         except Exception:
             # If we can't check for updates, assume data has changed
             return True
-    
+
     def get_cached_commodities_if_fresh(self):
         """Get recently cached commodities data if available and fresh (within 60 seconds)"""
-        if (hasattr(self, '_cached_commodities') and 
-            hasattr(self, '_cached_commodities_timestamp') and
-            self._cached_commodities_timestamp and
-            (datetime.now(UTC) - self._cached_commodities_timestamp).total_seconds() < 60):
+        if (
+            hasattr(self, "_cached_commodities")
+            and hasattr(self, "_cached_commodities_timestamp")
+            and self._cached_commodities_timestamp
+            and (datetime.now(UTC) - self._cached_commodities_timestamp).total_seconds()
+            < 60
+        ):
             return self._cached_commodities
         return None
 
@@ -188,7 +193,11 @@ class BlizzardAPI:
         """Get list of all professions"""
         url = self._build_url("/data/wow/profession/index")
         response = self._make_request("GET", url, self._static_params())
-        return response["professions"]
+
+        if isinstance(response, dict):
+            return response["professions"]
+        else:
+            raise RuntimeError("Expected JSON response but got Response object")
 
     def get_profession_info(self, profession_href):
         """Get skill tiers for a profession"""
@@ -204,22 +213,3 @@ class BlizzardAPI:
         """Get ingredients for a recipe"""
         response = self._make_request("GET", recipe_href, self._static_params())
         return response
-
-
-def example_usage():
-    config = BlizzardConfig(
-        client_id="d5fe6a67da4249bab6ac5f2e0e8d2f48",
-        client_secret="6CkDstcu395FBCnBz3Xf8zej3pKJ6if2",
-        region="us",
-    )
-
-    api = BlizzardAPI(config)
-
-    # Simple, clean usage
-    professions = api.get_professions()
-    commodities = api.get_commodities()
-
-    # Debug output removed - use logging instead if needed
-
-
-# example_usage()  # Commented out to prevent debug output
