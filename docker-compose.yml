@@ -1,7 +1,7 @@
 services:
   db:
-    image: postgres
-    container_name: db
+    image: postgres:15
+    container_name: ironforge-db
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -9,12 +9,49 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-  api:
-      platform: linux/amd64
-      depends_on:
-          - db
-      build: 
-        context: ./
-        dockerfile: ./Dockerfile
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ironforge-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@ironforge.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - '8080:80'
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  scheduler:
+    platform: linux/amd64
+    container_name: ironforge-scheduler
+    depends_on:
+      db:
+        condition: service_healthy
+    build: 
+      context: ./ironforge-scheduler-service
+      dockerfile: ./Dockerfile
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=DB
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  pgadmin_data:
