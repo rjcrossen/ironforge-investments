@@ -71,7 +71,7 @@ class SeederOrchestrator:
         )
 
         return not (recipes_completed and reagents_completed and items_completed)
-        #return False # For development purposes, always return False
+        #return True # For development purposes, always return True
 
     def mark_seeder_complete(self, session: Session, seeder_type: str) -> None:
         """Mark a seeder as completed in the database."""

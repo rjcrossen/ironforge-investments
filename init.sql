@@ -4,10 +4,10 @@
 -- Create items table
 CREATE TABLE IF NOT EXISTS items (
     id INTEGER NOT NULL PRIMARY KEY,
-    "name" VARCHAR(255) NOT NULL,
-    "level" SMALLINT NOT NULL,
-    "class" VARCHAR(50) NOT NULL,
-    subclass VARCHAR(50) NOT NULL,
+    item_name VARCHAR(255) NOT NULL,
+    item_level SMALLINT NOT NULL,
+    item_class VARCHAR(50) NOT NULL,
+    item_subclass VARCHAR(50) NOT NULL,
     inventory_type VARCHAR(50) NOT NULL,
     is_equippable BOOLEAN NOT NULL DEFAULT FALSE,
     is_stackable BOOLEAN NOT NULL DEFAULT FALSE,

@@ -27,18 +27,17 @@ class ItemSeeder(Seeder):
             # Process and insert items into the database
             item_values = []
             for item in items:
-                #print(item)  # Debugging line to see the item structure
                 item = item["data"]
                 try:
                     item_data = {
                         "id": item["id"],
-                        "name": item["name"]["en_US"],  # Added ["en_US"]
-                        "level": item["level"],
-                        "class_": item["item_class"]["name"]["en_US"],
-                        "subclass": item["item_subclass"]["name"]["en_US"],
+                        "item_name": item["name"]["en_US"],
+                        "item_level": item["level"],
+                        "item_class": item["item_class"]["name"]["en_US"],
+                        "item_subclass": item["item_subclass"]["name"]["en_US"],
                         "inventory_type": item["inventory_type"]["name"]["en_US"],
-                        "is_equippable": item["is_equippable"],  # Changed from equippable
-                        "is_stackable": item["is_stackable"],    # Changed from stackable
+                        "is_equippable": item["is_equippable"],
+                        "is_stackable": item["is_stackable"],
                         "quality": item["quality"]["name"]["en_US"]
                     }
                     item_values.append(item_data)
@@ -68,7 +67,7 @@ class ItemSeeder(Seeder):
             # Then create the new view
             ddl = DDL("""
                 CREATE OR REPLACE VIEW commodities AS
-                SELECT id, name, level, "class" AS class_, subclass, inventory_type, quality
+                SELECT id, item_name, item_level, item_class, item_subclass, inventory_type, quality
                 FROM items
                 WHERE is_stackable = true;
             """)

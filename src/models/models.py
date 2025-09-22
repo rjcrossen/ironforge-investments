@@ -174,10 +174,10 @@ class Item(Base):
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False)
-    level = Column(Integer, nullable=False)
-    class_ = Column(String(50), name="class", nullable=False)
-    subclass = Column(String(50), nullable=False)
+    item_name = Column(String(255), nullable=False)
+    item_level = Column(Integer, nullable=False)
+    item_class = Column(String(50), nullable=False)
+    item_subclass = Column(String(50), nullable=False)
     inventory_type = Column(String(50), nullable=False)
     is_equippable = Column(Boolean, nullable=False, default=False)
     is_stackable = Column(Boolean, nullable=False, default=False)
