@@ -64,7 +64,6 @@ class ItemSeeder(Seeder):
             # First drop the view if it exists
             ddl = DDL("DROP VIEW IF EXISTS commodities")
             session.execute(ddl)
-            print("Hello world")
             
             # Then create the new view
             ddl = DDL("""
