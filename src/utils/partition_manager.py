@@ -25,6 +25,8 @@ class PartitionManager:
             "auction_snapshots_us",
             "eu_commodity_price_stats",
             "us_commodity_price_stats",
+            "eu_token_price",
+            "us_token_price",
         ]
 
     def ensure_future_partitions(self, session: Session, months_ahead: int = 6) -> None:
@@ -101,7 +103,9 @@ class PartitionManager:
                 WHERE (pt.tablename LIKE '%auction_snapshots_eu_%' 
                        OR pt.tablename LIKE '%auction_snapshots_us_%'
                        OR pt.tablename LIKE '%eu_commodity_price_stats_%'
-                       OR pt.tablename LIKE '%us_commodity_price_stats_%')
+                       OR pt.tablename LIKE '%us_commodity_price_stats_%'
+                       OR pt.tablename LIKE '%eu_token_price_%'
+                       OR pt.tablename LIKE '%us_token_price_%')
                   AND pt.tablename ~ '_[0-9]{4}_[0-9]{2}$'
                 ORDER BY schemaname, tablename
             """)
@@ -148,7 +152,9 @@ class PartitionManager:
                 FROM pg_tables
                 WHERE (tablename LIKE '%auction_snapshots_%'
                    OR tablename LIKE '%eu_commodity_price_stats_%'
-                   OR tablename LIKE '%us_commodity_price_stats_%')
+                   OR tablename LIKE '%us_commodity_price_stats_%'
+                   OR tablename LIKE '%eu_token_price_%'
+                   OR tablename LIKE '%us_token_price_%')
                    AND tablename ~ '\\d{{4}}_\\d{{2}}$'
                    AND substring(tablename from '(\\d{{4}}_\\d{{2}})$') < '{cutoff_str}'
             """)

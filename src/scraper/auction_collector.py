@@ -3,11 +3,10 @@ from datetime import UTC, datetime, timedelta
 from scraper.blizzard_api_utils import BlizzardAPI
 from sqlalchemy.orm import Session
 
-from models.models import CommoditySummaryEU, CommoditySummaryUS
+from models.models import EUTokenPrice, USTokenPrice
 from repository.auction_repository_eu import AuctionRepositoryEU
 from repository.auction_repository_us import AuctionRepositoryUS
 from utils.auction_utils import (
-    calculate_median_price,
     count_new_listings,
     estimate_sales,
 )
@@ -163,7 +162,22 @@ class AuctionCollector:
                 model.__table__.insert(),
                 stats_values
             )
-            self.session.commit()
+            
+        # Collect and store token price
+        token_data = self.api.get_wow_token_price()
+        token_price = {
+            "timestamp": snapshot_time,
+            "price": token_data["price"]
+        }
+        
+        # Store token price in the appropriate regional table
+        token_model = EUTokenPrice if region == 'eu' else USTokenPrice
+        self.session.execute(
+            token_model.__table__.insert(),
+            [token_price]
+        )
+        
+        self.session.commit()
         
         # Return the Last-Modified timestamp for logging
         return last_modified

@@ -224,3 +224,9 @@ class BlizzardAPI:
         response = self._make_request("GET", url, params)
         if isinstance(response, dict):
             return response.get("results", [])
+        
+    def get_wow_token_price(self):
+        """Get current WoW Token price"""
+        url = self._build_url("/data/wow/token/index")
+        response = self._make_request("GET", url, self._dynamic_params())
+        return response

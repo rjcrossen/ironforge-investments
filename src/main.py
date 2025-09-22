@@ -104,7 +104,17 @@ def main():
     """Main entry point."""
     logger.info("Starting Ironforge Scheduler Service...")
     start_scheduler()
-
+    # Test WoW token index
+"""    from scraper.blizzard_api_utils import BlizzardAPI
+    from scraper.blizzard_api_utils import BlizzardConfig
+    config = BlizzardConfig(
+        client_id="d5fe6a67da4249bab6ac5f2e0e8d2f48",
+        client_secret="6CkDstcu395FBCnBz3Xf8zej3pKJ6if2",
+        region="eu"
+    )
+    api = BlizzardAPI(config)
+    token_info = api.get_wow_token_price()
+    print(token_info)"""
 
 if __name__ == "__main__":
     main()

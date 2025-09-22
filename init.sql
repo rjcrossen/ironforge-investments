@@ -44,6 +44,20 @@ CREATE TABLE IF NOT EXISTS us_commodity_price_stats (
     PRIMARY KEY (item_id, timestamp)
 ) PARTITION BY RANGE (timestamp);
 
+-- Create EU token price table
+CREATE TABLE IF NOT EXISTS eu_token_price (
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    price BIGINT NOT NULL,
+    PRIMARY KEY (timestamp)
+) PARTITION BY RANGE (timestamp);
+
+-- Create US token price table
+CREATE TABLE IF NOT EXISTS us_token_price (
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    price BIGINT NOT NULL,
+    PRIMARY KEY (timestamp)
+) PARTITION BY RANGE (timestamp);
+
 -- Create recipes table
 CREATE TABLE IF NOT EXISTS recipes (
     id INTEGER NOT NULL,
@@ -149,6 +163,9 @@ BEGIN
                        partition_name || '_item_time_idx', partition_name);
         EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (timestamp)', 
                        partition_name || '_time_idx', partition_name);
+    ELSIF parent_table LIKE '%token_price%' THEN
+        EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (timestamp)', 
+                       partition_name || '_time_idx', partition_name);
     END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -176,6 +193,10 @@ BEGIN
         PERFORM create_partition('eu_commodity_price_stats', 'eu_commodity_price_stats_' || partition_suffix, current_month, next_month);
         PERFORM create_partition('us_commodity_price_stats', 'us_commodity_price_stats_' || partition_suffix, current_month, next_month);
         
+        -- Create partitions for regional token price tables
+        PERFORM create_partition('eu_token_price', 'eu_token_price_' || partition_suffix, current_month, next_month);
+        PERFORM create_partition('us_token_price', 'us_token_price_' || partition_suffix, current_month, next_month);
+        
         current_month := next_month;
     END LOOP;
 END;
@@ -195,7 +216,9 @@ BEGIN
     WHERE (t.relname LIKE '%auction_snapshots_eu%' 
            OR t.relname LIKE '%auction_snapshots_us%'
            OR t.relname LIKE '%eu_commodity_price_stats%'
-           OR t.relname LIKE '%us_commodity_price_stats%')
+           OR t.relname LIKE '%us_commodity_price_stats%'
+           OR t.relname LIKE '%eu_token_price%'
+           OR t.relname LIKE '%us_token_price%')
     AND c.contype = 'c'
     AND pg_get_expr(c.conbin, c.conrelid) LIKE '%FOR VALUES FROM%'
     AND matches IS NOT NULL;

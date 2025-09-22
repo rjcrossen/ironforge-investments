@@ -154,6 +154,22 @@ class Benchmark(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class EUTokenPrice(Base):
+    """Tracks WoW Token prices in the EU region over time"""
+    __tablename__ = "eu_token_price"
+
+    timestamp = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
+    price = Column(BigInteger, nullable=False)
+
+
+class USTokenPrice(Base):
+    """Tracks WoW Token prices in the US region over time"""
+    __tablename__ = "us_token_price"
+
+    timestamp = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
+    price = Column(BigInteger, nullable=False)
+
+
 class Item(Base):
     __tablename__ = "items"
 
