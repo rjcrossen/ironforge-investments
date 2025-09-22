@@ -19,9 +19,8 @@ class EUCommodityPriceStats(Base):
     """Tracks price statistics for EU commodities over time"""
     __tablename__ = "eu_commodity_price_stats"
 
-    id = Column(Integer, primary_key=True)
-    item_id = Column(Integer, nullable=False)
-    timestamp = Column(DateTime, nullable=False, server_default=func.now())
+    item_id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
     
     # Price statistics
     min_price = Column(BigInteger)
@@ -34,18 +33,13 @@ class EUCommodityPriceStats(Base):
     num_auctions = Column(Integer)  # Number of distinct auctions for this item
     estimated_sales = Column(Integer)  # Estimated number of items sold since last snapshot
     new_listings = Column(Integer)  # Number of new items listed since last snapshot
-
-    __table_args__ = (
-        ForeignKeyConstraint(['item_id'], ['items.id']),
-    )
 
 class USCommodityPriceStats(Base):
     """Tracks price statistics for US commodities over time"""
     __tablename__ = "us_commodity_price_stats"
 
-    id = Column(Integer, primary_key=True)
-    item_id = Column(Integer, nullable=False)
-    timestamp = Column(DateTime, nullable=False, server_default=func.now())
+    item_id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
     
     # Price statistics
     min_price = Column(BigInteger)
@@ -58,10 +52,6 @@ class USCommodityPriceStats(Base):
     num_auctions = Column(Integer)  # Number of distinct auctions for this item
     estimated_sales = Column(Integer)  # Estimated number of items sold since last snapshot
     new_listings = Column(Integer)  # Number of new items listed since last snapshot
-
-    __table_args__ = (
-        ForeignKeyConstraint(['item_id'], ['items.id']),
-    )
 
 
 class Recipe(Base):
@@ -115,30 +105,6 @@ class AuctionSnapshotUS(Base):
     quantity = Column(Integer, nullable=False)
     time_left = Column(String(1), nullable=False)
     snapshot_time = Column(DateTime, primary_key=True)
-
-
-class CommoditySummaryEU(Base):
-    __tablename__ = "commodity_summaries_eu"
-
-    item_id = Column(Integer, primary_key=True)
-    minimum_price = Column(Integer, nullable=False)
-    median_price = Column(Integer, nullable=False)
-    total_quantity = Column(Integer, nullable=False)
-    new_listings = Column(Integer, nullable=False)
-    estimated_sales = Column(Integer, nullable=False)
-    summary_time = Column(DateTime, primary_key=True)
-
-
-class CommoditySummaryUS(Base):
-    __tablename__ = "commodity_summaries_us"
-
-    item_id = Column(Integer, primary_key=True)
-    minimum_price = Column(Integer, nullable=False)
-    median_price = Column(Integer, nullable=False)
-    total_quantity = Column(Integer, nullable=False)
-    new_listings = Column(Integer, nullable=False)
-    estimated_sales = Column(Integer, nullable=False)
-    summary_time = Column(DateTime, primary_key=True)
 
 
 class SeederStatus(Base):
