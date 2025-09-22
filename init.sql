@@ -1,6 +1,59 @@
 -- Ironforge Database Initialization Script
 -- This script creates all necessary tables and sets up initial partitioning
 
+-- Create items table
+CREATE TABLE IF NOT EXISTS items (
+    id INTEGER NOT NULL PRIMARY KEY,
+    "name" VARCHAR(255) NOT NULL,
+    "level" SMALLINT NOT NULL,
+    "class" VARCHAR(50) NOT NULL,
+    subclass VARCHAR(50) NOT NULL,
+    inventory_type VARCHAR(50) NOT NULL,
+    is_equippable BOOLEAN NOT NULL DEFAULT FALSE,
+    is_stackable BOOLEAN NOT NULL DEFAULT FALSE,
+    quality VARCHAR(10) NOT NULL
+);
+
+-- Create EU commodity price stats table
+CREATE TABLE IF NOT EXISTS eu_commodity_price_stats (
+    id SERIAL PRIMARY KEY,
+    --item_id INTEGER NOT NULL REFERENCES items(id),
+    item_id INTEGER NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    min_price BIGINT,
+    max_price BIGINT,
+    mean_price DOUBLE PRECISION,
+    median_price DOUBLE PRECISION,
+    total_quantity BIGINT,
+    num_auctions INTEGER,
+    estimated_sales INTEGER,
+    new_listings INTEGER
+);
+
+-- Create index on timestamp for time-series queries
+CREATE INDEX IF NOT EXISTS idx_eu_commodity_timestamp ON eu_commodity_price_stats(timestamp);
+CREATE INDEX IF NOT EXISTS idx_eu_commodity_item_id ON eu_commodity_price_stats(item_id);
+
+-- Create US commodity price stats table
+CREATE TABLE IF NOT EXISTS us_commodity_price_stats (
+    id SERIAL PRIMARY KEY,
+    --item_id INTEGER NOT NULL REFERENCES items(id),
+    item_id INTEGER NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    min_price BIGINT,
+    max_price BIGINT,
+    mean_price DOUBLE PRECISION,
+    median_price DOUBLE PRECISION,
+    total_quantity BIGINT,
+    num_auctions INTEGER,
+    estimated_sales INTEGER,
+    new_listings INTEGER
+);
+
+-- Create index on timestamp for time-series queries
+CREATE INDEX IF NOT EXISTS idx_us_commodity_timestamp ON us_commodity_price_stats(timestamp);
+CREATE INDEX IF NOT EXISTS idx_us_commodity_item_id ON us_commodity_price_stats(item_id);
+
 -- Create recipes table
 CREATE TABLE IF NOT EXISTS recipes (
     id INTEGER NOT NULL,

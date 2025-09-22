@@ -36,30 +36,30 @@ class AuctionRepositoryUS:
             if not snapshot_data:
                 return {}
 
-            # SQL-side grouping: Group by item_id and fetch only needed fields
+            # Fetch all auctions for the snapshot time
             auctions = (
                 self.session.query(
+                    AuctionSnapshotUS.auction_id,
                     AuctionSnapshotUS.item_id,
-                    func.array_agg(
-                        func.jsonb_build_object(
-                            "id",
-                            AuctionSnapshotUS.auction_id,
-                            "quantity",
-                            AuctionSnapshotUS.quantity,
-                            "unit_price",
-                            AuctionSnapshotUS.unit_price,
-                            "time_left",
-                            AuctionSnapshotUS.time_left,
-                        )
-                    ).label("auctions"),
+                    AuctionSnapshotUS.quantity,
+                    AuctionSnapshotUS.unit_price,
+                    AuctionSnapshotUS.time_left,
                 )
                 .filter(AuctionSnapshotUS.snapshot_time == snapshot_data.snapshot_time)
-                .group_by(AuctionSnapshotUS.item_id)
                 .all()
             )
 
-            # Convert result to dictionary
-            snapshot = {item_id: auctions for item_id, auctions in auctions}
+            # Convert SQLAlchemy result to list of dictionaries
+            snapshot = [
+                {
+                    "id": auction.auction_id,
+                    "item_id": auction.item_id,
+                    "quantity": auction.quantity,
+                    "unit_price": auction.unit_price,
+                    "time_left": auction.time_left,
+                }
+                for auction in auctions
+            ]
             return snapshot
         except Exception as e:
             print(f"Error retrieving US snapshot: {e}")

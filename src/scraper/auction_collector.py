@@ -30,8 +30,18 @@ class AuctionCollector:
             "LONG": 3,  # 2 - 12 hours
             "VERY_LONG": 4,  # 12 - 48 hours
         }
-        # Region-specific tables are used directly, no need for generic snapshot tracking
-        self.last_time_collected = None
+        
+    def get_last_collection_time(self, region: str) -> datetime | None:
+        """Get the timestamp of the last commodity price stats collection for the region"""
+        from sqlalchemy import func, text
+        table = "eu_commodity_price_stats" if region == "eu" else "us_commodity_price_stats"
+        result = self.session.execute(
+            text(f"SELECT MAX(timestamp AT TIME ZONE 'UTC') FROM {table}")
+        ).scalar()
+        if result:
+            # Ensure the timestamp is UTC-aware
+            return datetime.fromisoformat(str(result)).replace(tzinfo=UTC)
+        return None
 
 
 
@@ -42,6 +52,9 @@ class AuctionCollector:
         # Get commodities data from API (check cache first to avoid double requests)
         commodities = self.api.get_cached_commodities_if_fresh()
         last_modified = None
+        
+        # Determine region from repository type
+        region = 'eu' if isinstance(self.repository, AuctionRepositoryEU) else 'us'
         
         if commodities is None:
             # Get fresh data with headers to capture Last-Modified
@@ -79,6 +92,78 @@ class AuctionCollector:
 
         # Database insertion
         self.repository.batch_insert(auction_model, values)
+        
+        # Process commodity statistics
+        from models.models import EUCommodityPriceStats, USCommodityPriceStats
+        from utils.auction_utils import calculate_commodity_stats
+        
+        # Get previous snapshot for comparison
+        region = 'eu' if isinstance(self.repository, AuctionRepositoryEU) else 'us'
+        last_collection_time = self.get_last_collection_time(region)
+        previous_snapshot = self.get_snapshot(last_collection_time) if last_collection_time else None
+        
+        # Group previous snapshot data by item_id
+        previous_by_item = {}
+        if previous_snapshot:
+            for prev_auction in previous_snapshot:  # previous_snapshot is now a list of dicts
+                item_id = prev_auction["item_id"]
+                if item_id not in previous_by_item:
+                    previous_by_item[item_id] = []
+                previous_by_item[item_id].append({
+                    "id": prev_auction["id"],
+                    "quantity": prev_auction["quantity"],
+                    "time_left": prev_auction["time_left"]
+                })
+        
+        # Group current auctions by item_id
+        item_auctions = {}
+        current_by_item = {}
+        for auction in commodities["auctions"]:
+            item_id = auction["item"]["id"]
+            if item_id not in item_auctions:
+                item_auctions[item_id] = []
+                current_by_item[item_id] = []
+            
+            auction_data = {
+                "unit_price": auction["unit_price"],
+                "quantity": auction["quantity"]
+            }
+            item_auctions[item_id].append(auction_data)
+            
+            current_by_item[item_id].append({
+                "id": auction["id"],
+                "quantity": auction["quantity"],
+                "time_left": self.TIME_LEFT_CODES[auction["time_left"]]
+            })
+        
+        # Calculate statistics for each commodity
+        stats_values = []
+        for item_id, auctions in item_auctions.items():
+            stats = calculate_commodity_stats(auctions)
+            
+            # Calculate estimated sales and new listings
+            previous_auctions = previous_by_item.get(item_id, [])
+            current_auctions = current_by_item[item_id]
+            
+            estimated_sales = estimate_sales(current_auctions, previous_auctions) if previous_auctions else 0
+            new_listings = count_new_listings(current_auctions, previous_auctions) if previous_auctions else 0
+            
+            stats_values.append({
+                "item_id": item_id,
+                "timestamp": snapshot_time,
+                "estimated_sales": estimated_sales,
+                "new_listings": new_listings,
+                **stats  # Unpack the calculated statistics
+            })
+        
+        # Batch insert the commodity statistics into the appropriate regional table
+        if stats_values:
+            model = EUCommodityPriceStats if region == 'eu' else USCommodityPriceStats
+            self.session.execute(
+                model.__table__.insert(),
+                stats_values
+            )
+            self.session.commit()
         
         # Return the Last-Modified timestamp for logging
         return last_modified

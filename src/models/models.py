@@ -15,6 +15,55 @@ from sqlalchemy.sql import func
 Base = declarative_base()
 
 
+class EUCommodityPriceStats(Base):
+    """Tracks price statistics for EU commodities over time"""
+    __tablename__ = "eu_commodity_price_stats"
+
+    id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, nullable=False)
+    timestamp = Column(DateTime, nullable=False, server_default=func.now())
+    
+    # Price statistics
+    min_price = Column(BigInteger)
+    max_price = Column(BigInteger)
+    mean_price = Column(Float)
+    median_price = Column(Float)
+    
+    # Quantity statistics
+    total_quantity = Column(BigInteger)
+    num_auctions = Column(Integer)  # Number of distinct auctions for this item
+    estimated_sales = Column(Integer)  # Estimated number of items sold since last snapshot
+    new_listings = Column(Integer)  # Number of new items listed since last snapshot
+
+    __table_args__ = (
+        ForeignKeyConstraint(['item_id'], ['items.id']),
+    )
+
+class USCommodityPriceStats(Base):
+    """Tracks price statistics for US commodities over time"""
+    __tablename__ = "us_commodity_price_stats"
+
+    id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, nullable=False)
+    timestamp = Column(DateTime, nullable=False, server_default=func.now())
+    
+    # Price statistics
+    min_price = Column(BigInteger)
+    max_price = Column(BigInteger)
+    mean_price = Column(Float)
+    median_price = Column(Float)
+    
+    # Quantity statistics
+    total_quantity = Column(BigInteger)
+    num_auctions = Column(Integer)  # Number of distinct auctions for this item
+    estimated_sales = Column(Integer)  # Estimated number of items sold since last snapshot
+    new_listings = Column(Integer)  # Number of new items listed since last snapshot
+
+    __table_args__ = (
+        ForeignKeyConstraint(['item_id'], ['items.id']),
+    )
+
+
 class Recipe(Base):
     __tablename__ = "recipes"
 

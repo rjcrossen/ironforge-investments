@@ -213,3 +213,14 @@ class BlizzardAPI:
         """Get ingredients for a recipe"""
         response = self._make_request("GET", recipe_href, self._static_params())
         return response
+
+    def search_items_by_id(self, starting_id=1, order_column="id"):
+        """Get 1000 items by ascending ID"""
+        url = self._build_url("/data/wow/search/item")
+        params = {"_pageSize": 1000,
+                  "id": f"[{starting_id},]",
+                  "orderby": order_column,
+                  **self._static_params()}
+        response = self._make_request("GET", url, params)
+        if isinstance(response, dict):
+            return response.get("results", [])

@@ -56,6 +56,9 @@ class SeederOrchestrator:
         reagents_status = (
             session.query(SeederStatus).filter_by(seeder_type="reagents").first()
         )
+        items_status = (
+            session.query(SeederStatus).filter_by(seeder_type="items").first()
+        )
 
         recipes_completed = recipes_status is not None and bool(
             recipes_status.completed
@@ -63,8 +66,13 @@ class SeederOrchestrator:
         reagents_completed = reagents_status is not None and bool(
             reagents_status.completed
         )
+        items_completed = items_status is not None and bool(
+            items_status.completed
+        )
 
-        return not (recipes_completed and reagents_completed)
+
+        return not (recipes_completed and reagents_completed and items_completed)
+        # return True # For development purposes, always return True
 
     def mark_seeder_complete(self, session: Session, seeder_type: str) -> None:
         """Mark a seeder as completed in the database."""
@@ -101,12 +109,18 @@ class SeederOrchestrator:
             reagents_status = (
                 session.query(SeederStatus).filter_by(seeder_type="reagents").first()
             )
+            items_status = (
+                session.query(SeederStatus).filter_by(seeder_type="items").first()
+            )
 
             recipes_completed = recipes_status is not None and bool(
                 recipes_status.completed
             )
             reagents_completed = reagents_status is not None and bool(
                 reagents_status.completed
+            )
+            items_completed = items_status is not None and bool(
+                items_status.completed
             )
 
             # Run recipes seeder if not completed
@@ -150,5 +164,28 @@ class SeederOrchestrator:
                         raise
             else:
                 self.logger.info("Reagents seeding already completed. Skipping.")
+
+            # Run items seeder if not completed
+            if not items_completed:
+            #if True:  # For development purposes, always run items seeder
+                benchmark_manager = BenchmarkManager(session)
+                with benchmark_manager.benchmark_operation(
+                    operation_type="seeding",
+                    operation_name="items_seeding",
+                ):
+                    try:
+                        self.logger.info("Running items seeder...")
+                        from seeding.items import ItemSeeder
+
+                        item_seeder = ItemSeeder(session)
+                        item_seeder.seed(session)
+                        self.mark_seeder_complete(session, "items")
+                        self.logger.info("Items seeding completed successfully.")
+                    except Exception as e:
+                        self.logger.error(f"Items seeding failed: {e}")
+                        raise
+            else:
+                self.logger.info("Items seeding already completed. Skipping.")
+                
 
             self.logger.info("Initial seeding process completed.")
