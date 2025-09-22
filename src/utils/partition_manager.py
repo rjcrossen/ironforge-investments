@@ -2,7 +2,7 @@
 Partition Manager for Ironforge Database
 
 This module handles automatic creation and management of database partitions
-for auction snapshots and commodity summaries tables.
+for auction snapshots and commodity price statistics tables.
 """
 
 import logging
@@ -23,8 +23,10 @@ class PartitionManager:
         self.partitioned_tables = [
             "auction_snapshots_eu",
             "auction_snapshots_us",
-            "commodity_summaries_eu",
-            "commodity_summaries_us",
+            "eu_commodity_price_stats",
+            "us_commodity_price_stats",
+            "eu_token_price",
+            "us_token_price",
         ]
 
     def ensure_future_partitions(self, session: Session, months_ahead: int = 6) -> None:
@@ -90,7 +92,7 @@ class PartitionManager:
             List of partition information dictionaries
         """
         try:
-            # Get partition info - simplified query to find time-partitioned tables
+            # Get partition info for both auction and commodity price stats tables
             result = session.execute(
                 text("""
                 SELECT 
@@ -100,8 +102,10 @@ class PartitionManager:
                 FROM pg_tables pt
                 WHERE (pt.tablename LIKE '%auction_snapshots_eu_%' 
                        OR pt.tablename LIKE '%auction_snapshots_us_%'
-                       OR pt.tablename LIKE '%commodity_summaries_eu_%'
-                       OR pt.tablename LIKE '%commodity_summaries_us_%')
+                       OR pt.tablename LIKE '%eu_commodity_price_stats_%'
+                       OR pt.tablename LIKE '%us_commodity_price_stats_%'
+                       OR pt.tablename LIKE '%eu_token_price_%'
+                       OR pt.tablename LIKE '%us_token_price_%')
                   AND pt.tablename ~ '_[0-9]{4}_[0-9]{2}$'
                 ORDER BY schemaname, tablename
             """)
@@ -141,13 +145,16 @@ class PartitionManager:
                 f"Checking for partitions older than {cutoff_str} to cleanup..."
             )
 
-            # Get list of old partitions
+            # Get list of old partitions for both auction and commodity price stats tables
             result = session.execute(
                 text(f"""
                 SELECT tablename
                 FROM pg_tables
-                WHERE (tablename LIKE '%auction_snapshots_%' 
-                       OR tablename LIKE '%commodity_summaries_%')
+                WHERE (tablename LIKE '%auction_snapshots_%'
+                   OR tablename LIKE '%eu_commodity_price_stats_%'
+                   OR tablename LIKE '%us_commodity_price_stats_%'
+                   OR tablename LIKE '%eu_token_price_%'
+                   OR tablename LIKE '%us_token_price_%')
                    AND tablename ~ '\\d{{4}}_\\d{{2}}$'
                    AND substring(tablename from '(\\d{{4}}_\\d{{2}})$') < '{cutoff_str}'
             """)
@@ -211,7 +218,6 @@ class PartitionManager:
 
             for partition in partitions:
                 partition_name = partition["partition_name"]
-                # Extract date from partition name (e.g. auction_snapshots_eu_2025_07)
                 try:
                     # Extract year and month from partition name
                     parts = partition_name.split("_")

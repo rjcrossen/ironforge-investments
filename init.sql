@@ -1,6 +1,63 @@
 -- Ironforge Database Initialization Script
 -- This script creates all necessary tables and sets up initial partitioning
 
+-- Create items table
+CREATE TABLE IF NOT EXISTS items (
+    id INTEGER NOT NULL PRIMARY KEY,
+    item_name VARCHAR(255) NOT NULL,
+    item_level SMALLINT NOT NULL,
+    item_class VARCHAR(50) NOT NULL,
+    item_subclass VARCHAR(50) NOT NULL,
+    inventory_type VARCHAR(50) NOT NULL,
+    is_equippable BOOLEAN NOT NULL DEFAULT FALSE,
+    is_stackable BOOLEAN NOT NULL DEFAULT FALSE,
+    quality VARCHAR(10) NOT NULL
+);
+
+-- Create EU commodity price stats table
+CREATE TABLE IF NOT EXISTS eu_commodity_price_stats (
+    item_id INTEGER NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    min_price BIGINT,
+    max_price BIGINT,
+    mean_price DOUBLE PRECISION,
+    median_price DOUBLE PRECISION,
+    total_quantity BIGINT,
+    num_auctions INTEGER,
+    estimated_sales INTEGER,
+    new_listings INTEGER,
+    PRIMARY KEY (item_id, timestamp)
+) PARTITION BY RANGE (timestamp);
+
+-- Create US commodity price stats table
+CREATE TABLE IF NOT EXISTS us_commodity_price_stats (
+    item_id INTEGER NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    min_price BIGINT,
+    max_price BIGINT,
+    mean_price DOUBLE PRECISION,
+    median_price DOUBLE PRECISION,
+    total_quantity BIGINT,
+    num_auctions INTEGER,
+    estimated_sales INTEGER,
+    new_listings INTEGER,
+    PRIMARY KEY (item_id, timestamp)
+) PARTITION BY RANGE (timestamp);
+
+-- Create EU token price table
+CREATE TABLE IF NOT EXISTS eu_token_price (
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    price BIGINT NOT NULL,
+    PRIMARY KEY (timestamp)
+) PARTITION BY RANGE (timestamp);
+
+-- Create US token price table
+CREATE TABLE IF NOT EXISTS us_token_price (
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    price BIGINT NOT NULL,
+    PRIMARY KEY (timestamp)
+) PARTITION BY RANGE (timestamp);
+
 -- Create recipes table
 CREATE TABLE IF NOT EXISTS recipes (
     id INTEGER NOT NULL,
@@ -84,30 +141,6 @@ CREATE TABLE IF NOT EXISTS auction_snapshots_us (
     PRIMARY KEY (auction_id, snapshot_time)
 ) PARTITION BY RANGE (snapshot_time);
 
--- Create partitioned commodity_summaries_eu table
-CREATE TABLE IF NOT EXISTS commodity_summaries_eu (
-    item_id INTEGER NOT NULL,
-    minimum_price BIGINT NOT NULL,
-    median_price BIGINT NOT NULL,
-    total_quantity INTEGER NOT NULL,
-    new_listings INTEGER NOT NULL,
-    estimated_sales INTEGER NOT NULL,
-    summary_time TIMESTAMP NOT NULL,
-    PRIMARY KEY (item_id, summary_time)
-) PARTITION BY RANGE (summary_time);
-
--- Create partitioned commodity_summaries_us table
-CREATE TABLE IF NOT EXISTS commodity_summaries_us (
-    item_id INTEGER NOT NULL,
-    minimum_price BIGINT NOT NULL,
-    median_price BIGINT NOT NULL,
-    total_quantity INTEGER NOT NULL,
-    new_listings INTEGER NOT NULL,
-    estimated_sales INTEGER NOT NULL,
-    summary_time TIMESTAMP NOT NULL,
-    PRIMARY KEY (item_id, summary_time)
-) PARTITION BY RANGE (summary_time);
-
 -- Function to create partition for a given table and date range
 CREATE OR REPLACE FUNCTION create_partition(
     parent_table TEXT,
@@ -125,10 +158,13 @@ BEGIN
                        partition_name || '_item_time_idx', partition_name);
         EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (snapshot_time)', 
                        partition_name || '_time_idx', partition_name);
-    ELSIF parent_table LIKE '%commodity_summaries%' THEN
-        EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (item_id, summary_time)', 
+    ELSIF parent_table LIKE '%commodity_price_stats%' THEN
+        EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (item_id, timestamp)', 
                        partition_name || '_item_time_idx', partition_name);
-        EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (summary_time)', 
+        EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (timestamp)', 
+                       partition_name || '_time_idx', partition_name);
+    ELSIF parent_table LIKE '%token_price%' THEN
+        EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %I (timestamp)', 
                        partition_name || '_time_idx', partition_name);
     END IF;
 END;
@@ -153,9 +189,13 @@ BEGIN
         PERFORM create_partition('auction_snapshots_eu', 'auction_snapshots_eu_' || partition_suffix, current_month, next_month);
         PERFORM create_partition('auction_snapshots_us', 'auction_snapshots_us_' || partition_suffix, current_month, next_month);
         
-        -- Create partitions for regional commodity summary tables
-        PERFORM create_partition('commodity_summaries_eu', 'commodity_summaries_eu_' || partition_suffix, current_month, next_month);
-        PERFORM create_partition('commodity_summaries_us', 'commodity_summaries_us_' || partition_suffix, current_month, next_month);
+        -- Create partitions for regional commodity price stats tables
+        PERFORM create_partition('eu_commodity_price_stats', 'eu_commodity_price_stats_' || partition_suffix, current_month, next_month);
+        PERFORM create_partition('us_commodity_price_stats', 'us_commodity_price_stats_' || partition_suffix, current_month, next_month);
+        
+        -- Create partitions for regional token price tables
+        PERFORM create_partition('eu_token_price', 'eu_token_price_' || partition_suffix, current_month, next_month);
+        PERFORM create_partition('us_token_price', 'us_token_price_' || partition_suffix, current_month, next_month);
         
         current_month := next_month;
     END LOOP;
@@ -173,7 +213,12 @@ BEGIN
     FROM pg_constraint c
     JOIN pg_class t ON c.conrelid = t.oid
     LEFT JOIN LATERAL regexp_matches(pg_get_expr(c.conbin, c.conrelid), 'TO \(''([^'']+)''.*\)') AS matches ON true
-    WHERE (t.relname LIKE '%auction_snapshots_eu%' OR t.relname LIKE '%auction_snapshots_us%')
+    WHERE (t.relname LIKE '%auction_snapshots_eu%' 
+           OR t.relname LIKE '%auction_snapshots_us%'
+           OR t.relname LIKE '%eu_commodity_price_stats%'
+           OR t.relname LIKE '%us_commodity_price_stats%'
+           OR t.relname LIKE '%eu_token_price%'
+           OR t.relname LIKE '%us_token_price%')
     AND c.contype = 'c'
     AND pg_get_expr(c.conbin, c.conrelid) LIKE '%FOR VALUES FROM%'
     AND matches IS NOT NULL;

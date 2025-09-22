@@ -35,3 +35,43 @@ def count_new_listings(current: list[dict], previous: list[dict]) -> int:
         if a["id"] not in previous_ids
         and a["time_left"] != 1  # 1 = less than 30 minutes
     )
+
+
+def calculate_commodity_stats(auctions: list[dict]) -> dict:
+    """Calculate statistics for a commodity from its auctions
+    
+    Args:
+        auctions: List of auction dictionaries containing 'unit_price' and 'quantity'
+    
+    Returns:
+        Dictionary containing min_price, max_price, mean_price, median_price,
+        total_quantity, and num_auctions
+    """
+    if not auctions:
+        return {
+            'min_price': None,
+            'max_price': None,
+            'mean_price': None,
+            'median_price': None,
+            'total_quantity': 0,
+            'num_auctions': 0
+        }
+        
+    prices = []
+    quantities = []
+    
+    for auction in auctions:
+        price = auction['unit_price']
+        quantity = auction['quantity']
+        # Extend prices list with the price repeated for each item
+        prices.extend([price] * quantity)
+        quantities.append(quantity)
+    
+    return {
+        'min_price': min(prices),
+        'max_price': max(prices),
+        'mean_price': statistics.mean(prices),
+        'median_price': statistics.median(prices),
+        'total_quantity': sum(quantities),
+        'num_auctions': len(auctions)
+    }

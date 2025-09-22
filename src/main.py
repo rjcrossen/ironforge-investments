@@ -105,6 +105,5 @@ def main():
     logger.info("Starting Ironforge Scheduler Service...")
     start_scheduler()
 
-
 if __name__ == "__main__":
     main()

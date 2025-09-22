@@ -3,11 +3,10 @@ from datetime import UTC, datetime, timedelta
 from scraper.blizzard_api_utils import BlizzardAPI
 from sqlalchemy.orm import Session
 
-from models.models import CommoditySummaryEU, CommoditySummaryUS
+from models.models import EUTokenPrice, USTokenPrice
 from repository.auction_repository_eu import AuctionRepositoryEU
 from repository.auction_repository_us import AuctionRepositoryUS
 from utils.auction_utils import (
-    calculate_median_price,
     count_new_listings,
     estimate_sales,
 )
@@ -30,8 +29,18 @@ class AuctionCollector:
             "LONG": 3,  # 2 - 12 hours
             "VERY_LONG": 4,  # 12 - 48 hours
         }
-        # Region-specific tables are used directly, no need for generic snapshot tracking
-        self.last_time_collected = None
+        
+    def get_last_collection_time(self, region: str) -> datetime | None:
+        """Get the timestamp of the last commodity price stats collection for the region"""
+        from sqlalchemy import func, text
+        table = "eu_commodity_price_stats" if region == "eu" else "us_commodity_price_stats"
+        result = self.session.execute(
+            text(f"SELECT MAX(timestamp AT TIME ZONE 'UTC') FROM {table}")
+        ).scalar()
+        if result:
+            # Ensure the timestamp is UTC-aware
+            return datetime.fromisoformat(str(result)).replace(tzinfo=UTC)
+        return None
 
 
 
@@ -42,6 +51,9 @@ class AuctionCollector:
         # Get commodities data from API (check cache first to avoid double requests)
         commodities = self.api.get_cached_commodities_if_fresh()
         last_modified = None
+        
+        # Determine region from repository type
+        region = 'eu' if isinstance(self.repository, AuctionRepositoryEU) else 'us'
         
         if commodities is None:
             # Get fresh data with headers to capture Last-Modified
@@ -80,58 +92,96 @@ class AuctionCollector:
         # Database insertion
         self.repository.batch_insert(auction_model, values)
         
+        # Process commodity statistics
+        from models.models import EUCommodityPriceStats, USCommodityPriceStats
+        from utils.auction_utils import calculate_commodity_stats
+        
+        # Get previous snapshot for comparison
+        region = 'eu' if isinstance(self.repository, AuctionRepositoryEU) else 'us'
+        last_collection_time = self.get_last_collection_time(region)
+        previous_snapshot = self.get_snapshot(last_collection_time) if last_collection_time else None
+        
+        # Group previous snapshot data by item_id
+        previous_by_item = {}
+        if previous_snapshot:
+            for prev_auction in previous_snapshot:  # previous_snapshot is now a list of dicts
+                item_id = prev_auction["item_id"]
+                if item_id not in previous_by_item:
+                    previous_by_item[item_id] = []
+                previous_by_item[item_id].append({
+                    "id": prev_auction["id"],
+                    "quantity": prev_auction["quantity"],
+                    "time_left": prev_auction["time_left"]
+                })
+        
+        # Group current auctions by item_id
+        item_auctions = {}
+        current_by_item = {}
+        for auction in commodities["auctions"]:
+            item_id = auction["item"]["id"]
+            if item_id not in item_auctions:
+                item_auctions[item_id] = []
+                current_by_item[item_id] = []
+            
+            auction_data = {
+                "unit_price": auction["unit_price"],
+                "quantity": auction["quantity"]
+            }
+            item_auctions[item_id].append(auction_data)
+            
+            current_by_item[item_id].append({
+                "id": auction["id"],
+                "quantity": auction["quantity"],
+                "time_left": self.TIME_LEFT_CODES[auction["time_left"]]
+            })
+        
+        # Calculate statistics for each commodity
+        stats_values = []
+        for item_id, auctions in item_auctions.items():
+            stats = calculate_commodity_stats(auctions)
+            
+            # Calculate estimated sales and new listings
+            previous_auctions = previous_by_item.get(item_id, [])
+            current_auctions = current_by_item[item_id]
+            
+            estimated_sales = estimate_sales(current_auctions, previous_auctions) if previous_auctions else 0
+            new_listings = count_new_listings(current_auctions, previous_auctions) if previous_auctions else 0
+            
+            stats_values.append({
+                "item_id": item_id,
+                "timestamp": snapshot_time,
+                "estimated_sales": estimated_sales,
+                "new_listings": new_listings,
+                **stats  # Unpack the calculated statistics
+            })
+        
+        # Batch insert the commodity statistics into the appropriate regional table
+        if stats_values:
+            model = EUCommodityPriceStats if region == 'eu' else USCommodityPriceStats
+            self.session.execute(
+                model.__table__.insert(),
+                stats_values
+            )
+            
+        # Collect and store token price
+        token_data = self.api.get_wow_token_price()
+        token_price = {
+            "timestamp": snapshot_time,
+            "price": token_data["price"]
+        }
+        
+        # Store token price in the appropriate regional table
+        token_model = EUTokenPrice if region == 'eu' else USTokenPrice
+        self.session.execute(
+            token_model.__table__.insert(),
+            [token_price]
+        )
+        
+        self.session.commit()
+        
         # Return the Last-Modified timestamp for logging
         return last_modified
 
     def get_snapshot(self, timestamp: datetime):
         """Get auction snapshot for specific timestamp"""
         return self.repository.get_snapshot(timestamp)
-
-    def process_summary(self, current_time: datetime, summary_model):
-        """Calculate summary statistics and estimate sales"""
-        benchmark_manager = BenchmarkManager(self.session)
-        
-        with benchmark_manager.benchmark_operation(
-            operation_type="summary",
-            operation_name="summary_processing",
-        ):
-            # Get current and previous snapshot
-            current = self.get_snapshot(current_time)
-            previous = self.get_snapshot(current_time - timedelta(hours=1))
-
-            assert isinstance(current, dict)
-            assert isinstance(previous, dict)
-
-            # Calculate statistics per item
-            summaries = []
-            for item_id in set(current.keys()) | set(previous.keys()):
-                curr_auctions = current.get(item_id, [])
-                prev_auctions = previous.get(item_id, [])
-
-                # Calculate metrics
-                minimum_price = (
-                    min(a["unit_price"] for a in curr_auctions) if curr_auctions else None
-                )
-                median_price = (
-                    calculate_median_price(curr_auctions) if curr_auctions else None
-                )
-                total_quantity = (
-                    sum(a["quantity"] for a in curr_auctions) if curr_auctions else 0
-                )
-                new_listings = count_new_listings(curr_auctions, prev_auctions)
-                estimated_sales = estimate_sales(curr_auctions, prev_auctions)
-
-                summaries.append(
-                    {
-                        "item_id": item_id,
-                        "minimum_price": minimum_price,
-                        "median_price": median_price,
-                        "total_quantity": total_quantity,
-                        "new_listings": new_listings,
-                        "estimated_sales": estimated_sales,
-                        "summary_time": current_time,
-                    }
-                )
-
-            # Summary database insertion
-            self.repository.batch_insert(summary_model, summaries)
