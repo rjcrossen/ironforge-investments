@@ -52,6 +52,29 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
 
+  api:
+    platform: linux/amd64
+    container_name: ironforge-api
+    depends_on:
+      db:
+        condition: service_healthy
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.api
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=DB
+    env_file:
+      - .env
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./src:/app
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   pgadmin_data:
