@@ -1,4 +1,3 @@
-import time
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Any, Dict, Optional
@@ -10,10 +9,10 @@ from models.models import Benchmark
 
 class BenchmarkManager:
     """Manager for recording operation benchmarks."""
-    
+
     def __init__(self, session: Session):
         self.session = session
-    
+
     def record_benchmark(
         self,
         operation_type: str,
@@ -28,7 +27,7 @@ class BenchmarkManager:
     ) -> None:
         """Record a benchmark entry in the database."""
         duration = (end_time - start_time).total_seconds()
-        
+
         benchmark = Benchmark(
             operation_type=operation_type,
             operation_name=operation_name,
@@ -41,7 +40,7 @@ class BenchmarkManager:
             error_message=error_message,
             metadata=metadata,
         )
-        
+
         self.session.add(benchmark)
         self.session.commit()
 
@@ -58,7 +57,7 @@ class BenchmarkManager:
         start_time = datetime.now(UTC)
         status = "success"
         error_message = None
-        
+
         try:
             yield
         except Exception as e:
@@ -86,6 +85,7 @@ def benchmark_decorator(
     region: Optional[str] = None,
 ):
     """Decorator for timing functions with database recording."""
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             # Try to find a session in the args/kwargs
@@ -94,19 +94,20 @@ def benchmark_decorator(
                 if isinstance(arg, Session):
                     session = arg
                     break
-            
+
             if session is None:
                 # If no session found, just run the function without benchmarking
                 return func(*args, **kwargs)
-            
+
             benchmark_manager = BenchmarkManager(session)
-            
+
             with benchmark_manager.benchmark_operation(
                 operation_type=operation_type,
                 operation_name=operation_name,
                 region=region,
             ):
                 return func(*args, **kwargs)
-        
+
         return wrapper
+
     return decorator
