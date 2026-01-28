@@ -87,11 +87,11 @@ flowchart TB
 
     Database -->|"Query"| APIService
 
-    %% Styling
-    classDef external fill:#ff9999,stroke:#333,stroke-width:2px
-    classDef service fill:#99ccff,stroke:#333,stroke-width:2px
-    classDef database fill:#99ff99,stroke:#333,stroke-width:2px
-    classDef future fill:#ffcc99,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+    %% Styling with dark text for readability
+    classDef external fill:#ff9999,stroke:#333,stroke-width:2px,color:#000
+    classDef service fill:#99ccff,stroke:#333,stroke-width:2px,color:#000
+    classDef database fill:#99ff99,stroke:#333,stroke-width:2px,color:#000
+    classDef future fill:#ffcc99,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:#000
 
     class BlizzardAPI external
     class Main,SeederOrch,ScraperOrch,RecipeSeeder,ReagentSeeder,ItemSeeder,AuctionCollector,BlizzardAPIClient,PartitionManager service
