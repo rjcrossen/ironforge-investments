@@ -1,0 +1,232 @@
+<h1 id="ironforge-investments---system-architecture">Ironforge
+Investments - System Architecture</h1>
+<h2 id="overview">Overview</h2>
+<p>Ironforge Investments is a data collection and analysis platform for
+World of Warcraft auction house data. The system collects auction data
+from both EU and US regions, stores it in a time-partitioned PostgreSQL
+database, and provides analysis capabilities for identifying market
+opportunities.</p>
+<h2 id="high-level-system-architecture">High-Level System
+Architecture</h2>
+<pre class="mermaid"><code>flowchart TB
+    subgraph External[&quot;External Services&quot;]
+        BlizzardAPI[&quot;Blizzard API\n(World of Warcraft)&quot;]
+    end
+
+    subgraph Scheduler[&quot;Scheduler Service&quot;]
+        direction TB
+        Main[&quot;SchedulerService\n(main.py)&quot;]
+
+        subgraph Seeding[&quot;Seeding System&quot;]
+            SeederOrch[&quot;SeederOrchestrator&quot;]
+            RecipeSeeder[&quot;RecipeSeeder&quot;]
+            ReagentSeeder[&quot;ReagentSeeder&quot;]
+            ItemSeeder[&quot;ItemSeeder&quot;]
+        end
+
+        subgraph Scraping[&quot;Data Collection&quot;]
+            ScraperOrch[&quot;ScraperOrchestrator&quot;]
+            AuctionCollector[&quot;AuctionCollector&quot;]
+            BlizzardAPIClient[&quot;BlizzardAPI Client&quot;]
+        end
+
+        PartitionManager[&quot;PartitionManagerService&quot;]
+    end
+
+    subgraph Database[&quot;PostgreSQL Database&quot;]
+        direction TB
+
+        subgraph AuctionTables[&quot;Auction Data&quot;]
+            AuctionSnapshotEU[&quot;AuctionSnapshotEU&quot;]
+            AuctionSnapshotUS[&quot;AuctionSnapshotUS&quot;]
+            EUStats[&quot;EUCommodityPriceStats&quot;]
+            USStats[&quot;USCommodityPriceStats&quot;]
+            EUToken[&quot;EUTokenPrice&quot;]
+            USToken[&quot;USTokenPrice&quot;]
+        end
+
+        subgraph CraftingTables[&quot;Crafting Data&quot;]
+            Recipe[&quot;Recipe&quot;]
+            Reagent[&quot;Reagent&quot;]
+            Item[&quot;Item&quot;]
+        end
+
+        subgraph OperationalTables[&quot;Operational Data&quot;]
+            SeederStatus[&quot;SeederStatus&quot;]
+            ScraperLog[&quot;ScraperLog&quot;]
+            Benchmark[&quot;Benchmark&quot;]
+        end
+    end
+
+    subgraph Future[&quot;Future Services&quot;]
+        APIService[&quot;API Service\n(Planned)&quot;]
+    end
+
+    %% Connections
+    BlizzardAPI --&gt;|&quot;OAuth + API Calls&quot;| BlizzardAPIClient
+    BlizzardAPIClient --&gt;|&quot;Fetch Recipes/Items&quot;| SeederOrch
+    BlizzardAPIClient --&gt;|&quot;Fetch Auctions&quot;| ScraperOrch
+
+    Main --&gt;|&quot;Initialize&quot;| PartitionManager
+    Main --&gt;|&quot;Run Once&quot;| SeederOrch
+    Main --&gt;|&quot;Continuous&quot;| ScraperOrch
+
+    SeederOrch --&gt; RecipeSeeder
+    SeederOrch --&gt; ReagentSeeder
+    SeederOrch --&gt; ItemSeeder
+
+    ScraperOrch --&gt; AuctionCollector
+    AuctionCollector --&gt;|&quot;Batch Insert&quot;| AuctionTables
+
+    RecipeSeeder --&gt;|&quot;Insert&quot;| Recipe
+    ReagentSeeder --&gt;|&quot;Insert&quot;| Reagent
+    ItemSeeder --&gt;|&quot;Insert&quot;| Item
+
+    SeederOrch --&gt;|&quot;Track Status&quot;| SeederStatus
+    ScraperOrch --&gt;|&quot;Log Attempts&quot;| ScraperLog
+    Main --&gt;|&quot;Performance Metrics&quot;| Benchmark
+
+    Database --&gt;|&quot;Query&quot;| APIService
+
+    %% Styling
+    classDef external fill:#ff9999,stroke:#333,stroke-width:2px
+    classDef service fill:#99ccff,stroke:#333,stroke-width:2px
+    classDef database fill:#99ff99,stroke:#333,stroke-width:2px
+    classDef future fill:#ffcc99,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+
+    class BlizzardAPI external
+    class Main,SeederOrch,ScraperOrch,RecipeSeeder,ReagentSeeder,ItemSeeder,AuctionCollector,BlizzardAPIClient,PartitionManager service
+    class AuctionSnapshotEU,AuctionSnapshotUS,EUStats,USStats,EUToken,USToken,Recipe,Reagent,Item,SeederStatus,ScraperLog,Benchmark database
+    class APIService future</code></pre>
+<h2 id="component-descriptions">Component Descriptions</h2>
+<h3 id="scheduler-service">Scheduler Service</h3>
+<p>The main application service that orchestrates all data collection
+and processing activities.</p>
+<p><strong>Key Components:</strong></p>
+<ul>
+<li><strong>SchedulerService</strong> (<code>main.py</code>): Entry
+point that initializes partitions, runs seeding, and starts continuous
+scraping</li>
+<li><strong>Signal Handling</strong>: Graceful shutdown on
+SIGINT/SIGTERM signals</li>
+</ul>
+<h3 id="seeding-system">Seeding System</h3>
+<p>One-time data population from Blizzard API for crafting-related
+data.</p>
+<p><strong>Components:</strong></p>
+<ul>
+<li><strong>SeederOrchestrator</strong>: Manages seeding workflow and
+tracks completion status</li>
+<li><strong>RecipeSeeder</strong>: Fetches all professions, skill tiers,
+and recipes from Blizzard API</li>
+<li><strong>ReagentSeeder</strong>: Extracts ingredients/reagents for
+each recipe</li>
+<li><strong>ItemSeeder</strong>: Populates item metadata (names, levels,
+types)</li>
+</ul>
+<p><strong>Data Flow:</strong></p>
+<pre><code>Blizzard API → Seeder → Repository → PostgreSQL</code></pre>
+<h3 id="data-collection-system">Data Collection System</h3>
+<p>Continuous auction house data collection with intelligent
+polling.</p>
+<p><strong>Components:</strong></p>
+<ul>
+<li><strong>ScraperOrchestrator</strong>: Manages polling schedule (:30
+past each hour) and retry logic</li>
+<li><strong>AuctionCollector</strong>: Collects and processes auction
+data for a specific region</li>
+<li><strong>BlizzardAPI Client</strong>: Handles OAuth, API requests,
+caching, and change detection</li>
+</ul>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li><strong>Change Detection</strong>: Uses HTTP If-Modified-Since
+headers to skip unchanged data (304 responses)</li>
+<li><strong>Caching</strong>: 60-second in-memory cache to avoid
+redundant API calls</li>
+<li><strong>Batch Processing</strong>: Inserts data in 5000-record
+chunks</li>
+<li><strong>Dual Region Support</strong>: Separate collection for EU and
+US</li>
+</ul>
+<p><strong>Data Flow:</strong></p>
+<pre><code>Blizzard API → BlizzardAPI Client → AuctionCollector → Repository → PostgreSQL</code></pre>
+<h3 id="postgresql-database">PostgreSQL Database</h3>
+<p>Time-partitioned storage for auction data and crafting
+information.</p>
+<p><strong>Auction Data Tables:</strong></p>
+<ul>
+<li><strong>AuctionSnapshotEU/US</strong>: Raw auction snapshots
+(auction_id, item_id, price, quantity, time_left)</li>
+<li><strong>EU/USCommodityPriceStats</strong>: Aggregated statistics
+(min/max/mean/median prices, sales estimates)</li>
+<li><strong>EU/USTokenPrice</strong>: WoW Token price tracking</li>
+</ul>
+<p><strong>Crafting Data Tables:</strong></p>
+<ul>
+<li><strong>Recipe</strong>: Crafting recipes with profession, skill
+tier, crafted item</li>
+<li><strong>Reagent</strong>: Recipe ingredients with quantities and
+optionality</li>
+<li><strong>Item</strong>: Item metadata and properties</li>
+</ul>
+<p><strong>Operational Tables:</strong></p>
+<ul>
+<li><strong>SeederStatus</strong>: Tracks which seeders have
+completed</li>
+<li><strong>ScraperLog</strong>: Logs all scraper attempts with status
+and errors</li>
+<li><strong>Benchmark</strong>: Performance metrics for operations</li>
+</ul>
+<p><strong>Partitioning Strategy:</strong></p>
+<ul>
+<li>Auction tables are time-partitioned by snapshot_time for efficient
+querying</li>
+<li>Daily partition maintenance runs automatically</li>
+</ul>
+<h3 id="future-services">Future Services</h3>
+<p><strong>API Service (Planned)</strong></p>
+<ul>
+<li>FastAPI-based service for querying auction data</li>
+<li>Will provide endpoints for price history, market analysis, and
+crafting profitability</li>
+</ul>
+<h2 id="data-collection-schedule">Data Collection Schedule</h2>
+<ul>
+<li><strong>Initial Seeding</strong>: Runs once on startup (if not
+completed)</li>
+<li><strong>Auction Collection</strong>: Every hour at :30 past the
+hour</li>
+<li><strong>Polling Window</strong>: 30-minute window with 30-second
+intervals</li>
+<li><strong>Partition Maintenance</strong>: Daily (automatic)</li>
+</ul>
+<h2 id="technology-stack">Technology Stack</h2>
+<ul>
+<li><strong>Language</strong>: Python 3.11+</li>
+<li><strong>Database</strong>: PostgreSQL with time-based
+partitioning</li>
+<li><strong>ORM</strong>: SQLAlchemy 2.0</li>
+<li><strong>API Client</strong>: Requests with urllib3 retry
+strategy</li>
+<li><strong>Type Checking</strong>: BasedPyright (strict mode)</li>
+<li><strong>Formatting</strong>: Ruff (PEP 8)</li>
+<li><strong>Package Manager</strong>: UV</li>
+</ul>
+<h2 id="repository-pattern">Repository Pattern</h2>
+<p>All database access follows the repository pattern:</p>
+<pre><code>Models (SQLAlchemy) ← Repositories ← Services/Seeders/Collectors</code></pre>
+<p><strong>Repositories:</strong></p>
+<ul>
+<li><code>AuctionRepositoryEU/US</code>: Auction data access</li>
+<li><code>RecipeRepository</code>: Recipe management</li>
+<li><code>ReagentRepository</code>: Reagent/ingredient management</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<p>See the following sections for detailed diagrams:</p>
+<ul>
+<li><a href="#data-flow-diagram">Data Flow Diagram</a></li>
+<li><a href="#component-interactions">Component Interactions</a></li>
+<li><a href="#data-model">Data Model</a></li>
+<li><a href="#sequence-diagrams">Sequence Diagrams</a></li>
+</ul>
