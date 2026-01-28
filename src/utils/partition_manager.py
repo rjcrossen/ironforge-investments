@@ -202,7 +202,7 @@ class PartitionManager:
             # Get partition information
             partitions = self.get_partition_info(session)
             health_info["partition_count"] = len(partitions)
-            
+
             self.logger.info(f"Found {len(partitions)} partitions")
             for partition in partitions:
                 self.logger.debug(f"Partition: {partition['partition_name']}")
@@ -225,13 +225,17 @@ class PartitionManager:
                         year_str = parts[-2]
                         month_str = parts[-1]
                         # Create end date as the first day of the next month
-                        partition_date = datetime.strptime(f"{year_str}-{month_str}-01", "%Y-%m-%d")
+                        partition_date = datetime.strptime(
+                            f"{year_str}-{month_str}-01", "%Y-%m-%d"
+                        )
                         # Calculate the end of the month
                         if partition_date.month == 12:
                             end_date = datetime(partition_date.year + 1, 1, 1)
                         else:
-                            end_date = datetime(partition_date.year, partition_date.month + 1, 1)
-                        
+                            end_date = datetime(
+                                partition_date.year, partition_date.month + 1, 1
+                            )
+
                         if end_date > max_future_date:
                             max_future_date = end_date
                 except (IndexError, ValueError):
@@ -285,12 +289,16 @@ class PartitionManager:
                 self.ensure_future_partitions(session, months_ahead=6)
 
             # Cleanup old partitions - configurable via environment
-            cleanup_enabled = os.getenv("PARTITION_CLEANUP_ENABLED", "false").lower() == "true"
+            cleanup_enabled = (
+                os.getenv("PARTITION_CLEANUP_ENABLED", "false").lower() == "true"
+            )
             if cleanup_enabled:
                 months_to_keep = int(os.getenv("PARTITION_CLEANUP_MONTHS", "12"))
                 self.cleanup_old_partitions(session, months_to_keep=months_to_keep)
             else:
-                self.logger.info("Partition cleanup disabled - preserving historical data")
+                self.logger.info(
+                    "Partition cleanup disabled - preserving historical data"
+                )
 
             self.logger.info("Partition maintenance completed successfully")
 

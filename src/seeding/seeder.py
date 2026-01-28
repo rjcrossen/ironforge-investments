@@ -66,12 +66,10 @@ class SeederOrchestrator:
         reagents_completed = reagents_status is not None and bool(
             reagents_status.completed
         )
-        items_completed = items_status is not None and bool(
-            items_status.completed
-        )
+        items_completed = items_status is not None and bool(items_status.completed)
 
         return not (recipes_completed and reagents_completed and items_completed)
-        #return True # For development purposes, always return True
+        # return True # For development purposes, always return True
 
     def mark_seeder_complete(self, session: Session, seeder_type: str) -> None:
         """Mark a seeder as completed in the database."""
@@ -118,9 +116,7 @@ class SeederOrchestrator:
             reagents_completed = reagents_status is not None and bool(
                 reagents_status.completed
             )
-            items_completed = items_status is not None and bool(
-                items_status.completed
-            )
+            items_completed = items_status is not None and bool(items_status.completed)
 
             # Run recipes seeder if not completed
             if not recipes_completed:
@@ -166,7 +162,7 @@ class SeederOrchestrator:
 
             # Run items seeder if not completed
             if not items_completed:
-            #if True:  # For development purposes, always run items seeder
+                # if True:  # For development purposes, always run items seeder
                 benchmark_manager = BenchmarkManager(session)
                 with benchmark_manager.benchmark_operation(
                     operation_type="seeding",
@@ -185,6 +181,5 @@ class SeederOrchestrator:
                         raise
             else:
                 self.logger.info("Items seeding already completed. Skipping.")
-                
 
             self.logger.info("Initial seeding process completed.")

@@ -8,6 +8,7 @@ from models.models import Item
 from scraper.blizzard_api_utils import BlizzardAPI, BlizzardConfig
 from seeding.seeder import Seeder
 
+
 class ItemSeeder(Seeder):
     def seed(self, session: Session) -> None:
         """Seed item data using the repository pattern."""
@@ -38,7 +39,7 @@ class ItemSeeder(Seeder):
                         "inventory_type": item["inventory_type"]["name"]["en_US"],
                         "is_equippable": item["is_equippable"],
                         "is_stackable": item["is_stackable"],
-                        "quality": item["quality"]["name"]["en_US"]
+                        "quality": item["quality"]["name"]["en_US"],
                     }
                     item_values.append(item_data)
                 except KeyError as e:
@@ -53,17 +54,17 @@ class ItemSeeder(Seeder):
             stmt = stmt.on_conflict_do_nothing()
             session.execute(stmt)
             session.commit()
-            
+
             starting_id = item_values[-1]["id"] + 1
-            
+
             print(f"Inserted {len(item_values)} items, next starting ID: {starting_id}")
-        
+
         # Create a commodities view after seeding items
         try:
             # First drop the view if it exists
             ddl = DDL("DROP VIEW IF EXISTS commodities")
             session.execute(ddl)
-            
+
             # Then create the new view
             ddl = DDL("""
                 CREATE OR REPLACE VIEW commodities AS
@@ -72,7 +73,7 @@ class ItemSeeder(Seeder):
                 WHERE is_stackable = true;
             """)
             session.execute(ddl)
-            
+
             session.commit()
             print("Successfully created commodities view")
         except Exception as e:

@@ -51,7 +51,9 @@ class SchedulerService:
         try:
             self.partition_manager.initialize_partitions()
         except Exception as e:
-            logger.warning(f"Partition initialization failed: {e}. Continuing without partitions...")
+            logger.warning(
+                f"Partition initialization failed: {e}. Continuing without partitions..."
+            )
 
         # Run initial seeding
         self.run_initial_seeding()
@@ -104,6 +106,7 @@ def main():
     """Main entry point."""
     logger.info("Starting Ironforge Scheduler Service...")
     start_scheduler()
+
 
 if __name__ == "__main__":
     main()

@@ -217,14 +217,16 @@ class BlizzardAPI:
     def search_items_by_id(self, starting_id=1, order_column="id"):
         """Get 1000 items by ascending ID"""
         url = self._build_url("/data/wow/search/item")
-        params = {"_pageSize": 1000,
-                  "id": f"[{starting_id},]",
-                  "orderby": order_column,
-                  **self._static_params()}
+        params = {
+            "_pageSize": 1000,
+            "id": f"[{starting_id},]",
+            "orderby": order_column,
+            **self._static_params(),
+        }
         response = self._make_request("GET", url, params)
         if isinstance(response, dict):
             return response.get("results", [])
-        
+
     def get_wow_token_price(self):
         """Get current WoW Token price"""
         url = self._build_url("/data/wow/token/index")
