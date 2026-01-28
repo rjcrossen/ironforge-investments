@@ -69,7 +69,7 @@ class ReagentRepository:
         """Get all optional reagents for a specific recipe."""
         return (
             self.session.query(Reagent)
-            .filter(Reagent.recipe_id == recipe_id, Reagent.optional == True)
+            .filter(Reagent.recipe_id == recipe_id, Reagent.optional.is_(True))
             .all()
         )
 
@@ -77,6 +77,6 @@ class ReagentRepository:
         """Get all required reagents for a specific recipe."""
         return (
             self.session.query(Reagent)
-            .filter(Reagent.recipe_id == recipe_id, Reagent.optional == False)
+            .filter(Reagent.recipe_id == recipe_id, Reagent.optional.is_(False))
             .all()
         )

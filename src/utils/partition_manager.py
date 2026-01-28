@@ -95,12 +95,12 @@ class PartitionManager:
             # Get partition info for both auction and commodity price stats tables
             result = session.execute(
                 text("""
-                SELECT 
+                SELECT
                     schemaname,
                     tablename as partition_name,
                     'time_partition' as partition_type
                 FROM pg_tables pt
-                WHERE (pt.tablename LIKE '%auction_snapshots_eu_%' 
+                WHERE (pt.tablename LIKE '%auction_snapshots_eu_%'
                        OR pt.tablename LIKE '%auction_snapshots_us_%'
                        OR pt.tablename LIKE '%eu_commodity_price_stats_%'
                        OR pt.tablename LIKE '%us_commodity_price_stats_%'

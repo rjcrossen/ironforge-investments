@@ -2,7 +2,7 @@
 
 ## Introduction/Overview
 
-This document outlines the requirements for creating comprehensive architectural diagrams and codebase understanding documentation in `docs/agent/architecture.md`. The goal is to provide clear visual representations of the system architecture, data flows, and component interactions to support ongoing maintenance and development of the Ironforge Investments platform.
+This document outlines the requirements for creating comprehensive architectural diagrams and codebase understanding documentation in `/docs/code/architecture.md`. The goal is to provide clear visual representations of the system architecture, data flows, and component interactions to support ongoing maintenance and development of the Ironforge Investments platform.
 
 ## Goals
 

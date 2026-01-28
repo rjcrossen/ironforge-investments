@@ -46,36 +46,36 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 3.2 Add connections between services
   - [x] 3.3 Add notes explaining each service's role
   - [x] 3.4 Add the diagram to docs/code/architecture.md
-- [ ] 4.0 Create data flow diagram
-  - [ ] 4.1 Create Mermaid diagram showing Blizzard API → Scraper → Database flow
-  - [ ] 4.2 Include data transformation steps
-  - [ ] 4.3 Show EU and US region data paths
-  - [ ] 4.4 Add the diagram to docs/code/architecture.md
-- [ ] 5.0 Create component interaction diagrams
-  - [ ] 5.1 Create diagram showing Scraper → Collector → Repository → Models flow
-  - [ ] 5.2 Create diagram showing Seeder → API Client → Repository flow
-  - [ ] 5.3 Add error handling paths to diagrams
-  - [ ] 5.4 Add the diagrams to docs/code/architecture.md
-- [ ] 6.0 Create data model overview diagram
-  - [ ] 6.1 Create Mermaid entity-relationship diagram for auction tables
-  - [ ] 6.2 Create diagram for recipe/reagent/item tables
-  - [ ] 6.3 Show table relationships and foreign keys
-  - [ ] 6.4 Add the diagrams to docs/code/architecture.md
-- [ ] 7.0 Create sequence diagrams for critical operations
-  - [ ] 7.1 Create sequence diagram for auction data collection
-  - [ ] 7.2 Create sequence diagram for recipe seeding process
-  - [ ] 7.3 Create sequence diagram for reagent seeding process
-  - [ ] 7.4 Include error handling in sequence diagrams
-  - [ ] 7.5 Add the diagrams to docs/code/architecture.md
-- [ ] 8.0 Add component inventory and documentation structure
-  - [ ] 8.1 Create table of contents for architecture.md
-  - [ ] 8.2 Write component inventory with descriptions
-  - [ ] 8.3 Add links to source files for each component
-  - [ ] 8.4 Add section explaining PostgreSQL partitioning strategy
-  - [ ] 8.5 Organize content with clear headings
-- [ ] 9.0 Review and validate diagrams
-  - [ ] 9.1 Verify all Mermaid diagrams render correctly in GitHub
-  - [ ] 9.2 Check for consistency with actual codebase
-  - [ ] 9.3 Review with ruff formatter
-  - [ ] 9.4 Run basedpyright to check for any issues
-  - [ ] 9.5 Commit all changes to the tests branch
+- [x] 4.0 Create data flow diagram
+  - [x] 4.1 Create Mermaid diagram showing Blizzard API → Scraper → Database flow
+  - [x] 4.2 Include data transformation steps
+  - [x] 4.3 Show EU and US region data paths
+  - [x] 4.4 Add the diagram to docs/code/architecture.md
+- [x] 5.0 Create component interaction diagrams
+  - [x] 5.1 Create diagram showing Scraper → Collector → Repository → Models flow
+  - [x] 5.2 Create diagram showing Seeder → API Client → Repository flow
+  - [x] 5.3 Add error handling paths to diagrams
+  - [x] 5.4 Add the diagrams to docs/code/architecture.md
+- [x] 6.0 Create data model overview diagram
+  - [x] 6.1 Create Mermaid entity-relationship diagram for auction tables
+  - [x] 6.2 Create diagram for recipe/reagent/item tables
+  - [x] 6.3 Show table relationships and foreign keys
+  - [x] 6.4 Add the diagrams to docs/code/architecture.md
+- [x] 7.0 Create sequence diagrams for critical operations
+  - [x] 7.1 Create sequence diagram for auction data collection
+  - [x] 7.2 Create sequence diagram for recipe seeding process
+  - [x] 7.3 Create sequence diagram for reagent seeding process
+  - [x] 7.4 Include error handling in sequence diagrams
+  - [x] 7.5 Add the diagrams to docs/code/architecture.md
+- [x] 8.0 Add component inventory and documentation structure
+  - [x] 8.1 Create table of contents for architecture.md
+  - [x] 8.2 Write component inventory with descriptions
+  - [x] 8.3 Add links to source files for each component
+  - [x] 8.4 Add section explaining PostgreSQL partitioning strategy
+  - [x] 8.5 Organize content with clear headings
+- [x] 9.0 Review and validate diagrams
+  - [x] 9.1 Verify all Mermaid diagrams render correctly in GitHub
+  - [x] 9.2 Check for consistency with actual codebase
+  - [x] 9.3 Review with ruff formatter
+  - [x] 9.4 Run basedpyright to check for any issues
+  - [x] 9.5 Commit all changes to the tests branch
